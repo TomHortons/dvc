@@ -13,6 +13,18 @@ from dvc.command.base import CmdBase, fix_subparsers, append_doc_link
 logger = logging.getLogger(__name__)
 
 
+def show_nodes(P):
+    print("@@@@@@@@@@@@@@@@@@@@@@@")
+    print("@@@@ Showing nodes @@@@")
+    print("@@@@@@@@@@@@@@@@@@@@@@@")
+    for x, y in P.nodes(data=True):
+        print("node name: {}".format(x))
+        print("attr dict: {}".format(y))
+    print("@@@@@@@@@@@@@@@@@@@@@@@")
+    print("@@@@@@@@ DONE @@@@@@@@@")
+    print("@@@@@@@@@@@@@@@@@@@@@@@")
+
+
 class CmdPipelineShow(CmdBase):
     def _show(self, target, commands, outs, locked):
         import networkx
@@ -41,19 +53,31 @@ class CmdPipelineShow(CmdBase):
         from dvc.stage import Stage
 
         stage = Stage.load(self.repo, target)
+        print("@@@@@@@@@@@@")
+        print("@@@@@@@ build_graph: {}".format(stage))
+        print("@@@@@@@@@@@@")
         node = os.path.relpath(stage.path, self.repo.root_dir)
 
+        print("NODE IN BUILD_GRAPH: ", node)
+        print("self.repo.pipelines(): ", self.repo.pipelines())
         pipelines = list(
             filter(lambda g: node in g.nodes(), self.repo.pipelines())
         )
+        print("PIPELINE: ", pipelines)
 
         assert len(pipelines) == 1
         G = pipelines[0]
         stages = networkx.get_node_attributes(G, "stage")
 
         nodes = []
+        print("------------ Let's talk about nodes....")
         for n in G.nodes():
             stage = stages[n]
+            print("@@@ stage: {} @@@".format(stage))
+            print("* type of stage: {}".format(type(stage)))
+            print("* stage.cmd: {}".format(stage.cmd))
+            print("* stage.outs: {}".format(stage.outs))
+            print("* stage.relpath: {}".format(stage.relpath))
             if commands:
                 if stage.cmd is None:
                     continue
@@ -64,10 +88,21 @@ class CmdPipelineShow(CmdBase):
             else:
                 nodes.append(stage.relpath)
 
+        print("------------ Let's talk about edges....")
         edges = []
         for e in G.edges():
             from_stage = stages[e[0]]
             to_stage = stages[e[1]]
+            print("@@@ from_stage: {} @@@".format(from_stage))
+            print("* to_stage: {}".format(to_stage))
+            print("* type of from_stage: {}".format(type(from_stage)))
+            print("* type of to_stage: {}".format(type(to_stage)))
+            print("* from_stage.cmd: {}".format(from_stage.cmd))
+            print("* to_stage.cmd: {}".format(to_stage.cmd))
+            print("* from_stage.outs: {}".format(from_stage.outs))
+            print("* to_stage.outs: {}".format(to_stage.outs))
+            print("* from_stage.relpath: {}".format(from_stage.relpath))
+            print("* to_stage.relpath: {}".format(to_stage.relpath))
             if commands:
                 if to_stage.cmd is None:
                     continue
@@ -79,6 +114,12 @@ class CmdPipelineShow(CmdBase):
             else:
                 edges.append((from_stage.relpath, to_stage.relpath))
 
+        print("####" * 10)
+        print("NODE: {}".format(nodes))
+        print("type of nodes: {}".format(type(nodes[0])))
+        print("EDGE: {}".format(edges))
+        print("type of edges: {}".format(type(edges[0][0])))
+        print("####" * 10)
         return nodes, edges, networkx.is_tree(G)
 
     def _show_ascii(self, target, commands, outs):
@@ -121,7 +162,9 @@ class CmdPipelineShow(CmdBase):
         from networkx.drawing.nx_pydot import write_dot
 
         _, edges, _ = self.__build_graph(target, commands, outs)
+        print("EDEGS: ", edges)
         edges = [edge[::-1] for edge in edges]
+        print("EDEGS: ", edges)
 
         simple_g = networkx.DiGraph()
         simple_g.add_edges_from(edges)
@@ -129,6 +172,7 @@ class CmdPipelineShow(CmdBase):
         dot_file = StringIO()
         write_dot(simple_g, dot_file)
         logger.info(dot_file.getvalue())
+        print("#" * 80)
 
     def run(self):
         if not self.args.targets:
@@ -169,11 +213,16 @@ class CmdPipelineList(CmdBase):
         pipelines = self.repo.pipelines()
         for p in pipelines:
             stages = networkx.get_node_attributes(p, "stage")
+            print("stage: ", stages)
             for stage in stages:
+                print("@" * 20)
+                print("@: ", stage)
+                print("@: ", type(stage))
                 logger.info(stage)
             if len(stages) != 0:
                 logger.info("=" * 80)
         logger.info("{} pipeline(s) total".format(len(pipelines)))
+        print("@" * 20)
 
         return 0
 

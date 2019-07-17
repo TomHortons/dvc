@@ -348,6 +348,9 @@ class Repo(object):
         G = nx.DiGraph()
         G_active = nx.DiGraph()
         stages = stages or self.stages(from_directory, check_dag=False)
+        print("stages: ", stages)
+        print("stages[0]: ", stages[0])
+        print("stages[0].outs: ", stages[0].outs)
         stages = [stage for stage in stages if stage]
         outs = []
 
@@ -368,6 +371,7 @@ class Repo(object):
                     raise OutputDuplicationError(out.path, stages)
 
                 outs.append(out)
+                print("out in first stage iteration: ", type(out))
 
         for stage in stages:
             path_dir = os.path.dirname(stage.path) + os.sep
@@ -376,12 +380,15 @@ class Repo(object):
                     raise StagePathAsOutputError(stage.wdir, stage.relpath)
 
         for stage in stages:
+            print("#### new stage ####")
             node = os.path.relpath(stage.path, self.root_dir)
+            print("node: ", node)
 
             G.add_node(node, stage=stage)
             G_active.add_node(node, stage=stage)
 
             for dep in stage.deps:
+                print("## dep: ", dep)
                 for out in outs:
                     if (
                         out.path != dep.path
@@ -390,11 +397,20 @@ class Repo(object):
                     ):
                         continue
 
+                    print("out: ", out)
+                    print("out.path: ", out.path)
+                    print("out.sep: ", out.sep)
                     dep_stage = out.stage
                     dep_node = os.path.relpath(dep_stage.path, self.root_dir)
+                    print("add_node: ", dep_node)
+                    print("add_node(attr): ", dir(dep_stage))
+                    print("add_node(md5): ", dir(dep_stage.PARAM_MD5))
                     G.add_node(dep_node, stage=dep_stage)
+                    print("add_edge: ", node)
+                    print("add_edge(attr): ", dep_node)
                     G.add_edge(node, dep_node)
                     if not stage.locked:
+                        print("stage is opened. Do same action to G_active.")
                         G_active.add_node(dep_node, stage=dep_stage)
                         G_active.add_edge(node, dep_node)
 
